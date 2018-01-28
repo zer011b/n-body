@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 #-*- coding: utf-8 -*-
 
+# compare with http://www.andreasfaisst.ch/Simulationen/Nbody/2body.php
+
 # import system libs
 # подключение системных библиотек
 import sys
@@ -12,7 +14,8 @@ from time import sleep
 
 # constants
 # константы
-G = 6.67408 * (10 ** (-11))
+G = 1
+#G = 6.67408 * (10 ** (-11))
 
 # default values for global variables
 # глобальные переменные с их значениями по умолчанию
@@ -47,9 +50,9 @@ y = [0] * N
 vx = [0] * N
 vy = [0] * N
 
-norm_r_ij = [[0] * N] * N
-r_ij_x = [[0] * N] * N
-r_ij_y = [[0] * N] * N
+norm_r_ij = [[0 for x in range(N)] for y in range(N)]
+r_ij_x = [[0 for x in range(N)] for y in range(N)]
+r_ij_y = [[0 for x in range(N)] for y in range(N)]
 
 eps = 0.001
 
@@ -65,7 +68,7 @@ class TaskWidget (QWidget):
 
     # constructor of TaskWidget
     # конструктор объектов класса TaskWidget
-    def __init__(self):
+    def __init__(self, app):
         # call constructor on parent object
         # функция super() возвращает родительский объект, и мы вызываем его конструктор
         super().__init__()
@@ -74,6 +77,7 @@ class TaskWidget (QWidget):
         # вызываем функцию, создающую графический интерфейс
         self.initUI()
         self.timestep = 0
+        self.app = app
 
 
     def change_body(self, index):
@@ -135,6 +139,7 @@ class TaskWidget (QWidget):
 
       self.update()
       sleep(0.1)
+      self.app.processEvents()
 
 
     # функция для проведения вычислений
@@ -147,13 +152,14 @@ class TaskWidget (QWidget):
         vy[i] = vy[i] + dt * G / 2 * self.calculate_r_ij_sum_y(i)
 
       for self.timestep in range(0, T):
-        print(str(self.timestep) + ' ' + str(x[0]))
+        print(str(self.timestep) + ': (' + str(vx[0]) + ',' + str(vy[0])+'); (' + str(vx[1]) + ',' + str(vy[1]) + ')')
         self.calculate_step()
 
 
     # button click handler
     # функция для обработки нажатия кнопки
     def button_click (self):
+      global T, dt
       self.pb.setEnabled(False)
       self.pb.setText("Подождите")
 
@@ -234,13 +240,13 @@ class TaskWidget (QWidget):
     # convert x coordinate to position
     # функция для преобразования координаты x в позицию на экране
     def xToPos(self,val):
-        return diffx + self.shiftx * max(x) - self.shiftx * val
+        return diffx + self.shiftx * val
 
 
     # convert y coordinate to position
     # функция для преобразования координаты y в позицию на экране
     def yToPos(self,val):
-        return diffy + self.shifty * max(y) - self.shifty * val
+        return diffy + self.shifty * val
 
 
     # init shift coefficients
@@ -257,8 +263,8 @@ class TaskWidget (QWidget):
         if maxy == miny:
           maxy = miny + 1
 
-        self.shiftx = (window_sizex - 2*diffx) / (maxx - minx)
-        self.shifty = (window_sizey - 2*diffy) / (maxy - miny)
+        self.shiftx = (window_sizex - 2*diffx) / 200
+        self.shifty = (window_sizey - 2*diffy) / 200
 
 
     # draw strings
@@ -278,6 +284,9 @@ class TaskWidget (QWidget):
         qp.drawText (QPointF(797, 28), "vy0=")
 
         qp.drawText (QPointF(700, 50), str(self.timestep))
+
+        qp.drawText (QPointF(100, 650), "Тело 0: r(" + str(x[0]) + ", " + str(y[0]) + "); v(" + str(vx[0]) + ", " + str(vy[0])+ ")")
+        qp.drawText (QPointF(100, 670), "Тело 1: r(" + str(x[1]) + ", " + str(y[1]) + "); v(" + str(vx[1]) + ", " + str(vy[1])+ ")")
 
 
     # paint of widget
@@ -340,7 +349,7 @@ if __name__ == '__main__':
 
     # create TaskWidget object and call its constructor
     # создаем объект TaskWidget и вызываем его конструктор
-    ex = TaskWidget ()
+    ex = TaskWidget (app)
 
     # launch app cycle
     # запуск основного цикла событий
