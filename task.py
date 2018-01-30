@@ -11,6 +11,7 @@ from PyQt5.QtGui import QPainter, QColor, QPen
 from PyQt5.QtCore import Qt, QPointF
 from math import exp, sqrt
 from time import sleep
+import random
 
 # constants
 # константы
@@ -55,6 +56,8 @@ y0 = [0] * N
 vx0 = [0] * N
 vy0 = [0] * N
 
+color = [QColor()] * N
+
 norm_r_ij = [[0 for x in range(N)] for y in range(N)]
 r_ij_x = [[0 for x in range(N)] for y in range(N)]
 r_ij_y = [[0 for x in range(N)] for y in range(N)]
@@ -68,6 +71,12 @@ diffxL=50
 diffxR=250
 diffyU=50
 diffyD=50
+
+area_sizex = 200
+area_sizey = 200
+
+area_startx = -100
+area_starty = -100
 
 # QT widget to draw GUI
 # Виджет для рисования графического интерфейса
@@ -99,6 +108,23 @@ class TaskWidget (QWidget):
 
       self.sb.setText("Сохранить для " + str(current_body_index) + " тела")
 
+    def update_area(self, maxx, maxy, minx, miny):
+      global area_sizex, area_sizey, area_startx, area_starty
+
+      if maxx - minx < 0.05 * area_sizex or maxx - minx > 0.95 * area_sizex \
+         or minx <= area_startx or maxx >= area_startx + area_sizex:
+        area_sizex = 10*(maxx - minx)
+        if area_sizex == 0:
+          area_sizex = 200
+        area_startx = (maxx + minx)/2 - area_sizex/2
+
+      if maxy - miny < 0.05 * area_sizey or maxy - miny > 0.95 * area_sizey \
+         or miny <= area_starty or maxy >= area_starty + area_sizey:
+        area_sizey = 10*(maxy - miny)
+        if area_sizey == 0:
+          area_sizey = 200
+        area_starty = (maxy + miny)/2 - area_sizey/2
+
 
     def save_body(self):
       # get values from editor windows
@@ -109,12 +135,15 @@ class TaskWidget (QWidget):
       vx0[current_body_index]=float(self.le6.text())
       vy0[current_body_index]=float(self.le7.text())
 
+      color[current_body_index] = QColor(random.randint(0,255), random.randint(0,255), random.randint(0,255))
+
       for i in range(0,N):
         x[i] = x0[i]
         y[i] = y0[i]
         vx[i] = vx0[i]
         vy[i] = vy0[i]
 
+      self.update_area(max(x), max(y), min(x), min(y))
       self.update()
 
 
@@ -151,8 +180,9 @@ class TaskWidget (QWidget):
         vx[i] = vx[i] + dt * G * self.calculate_r_ij_sum_x(i)
         vy[i] = vy[i] + dt * G * self.calculate_r_ij_sum_y(i)
 
+      self.update_area(max(x), max(y), min(x), min(y))
       self.update()
-      sleep(0.1)
+      #sleep(0.05)
       self.app.processEvents()
 
 
@@ -166,7 +196,7 @@ class TaskWidget (QWidget):
         vy[i] = vy[i] + dt * G / 2 * self.calculate_r_ij_sum_y(i)
 
       for self.timestep in range(0, T):
-        print(str(self.timestep) + ': (' + str(vx[0]) + ',' + str(vy[0])+'); (' + str(vx[1]) + ',' + str(vy[1]) + ')')
+        print(str(self.timestep) + ': (' + str(x[0]) + ',' + str(y[0])+'); (' + str(x[1]) + ',' + str(y[1]) + ')')
         self.calculate_step()
 
 
@@ -255,31 +285,20 @@ class TaskWidget (QWidget):
     # convert x coordinate to position
     # функция для преобразования координаты x в позицию на экране
     def xToPos(self,val):
-        return diffxL + self.shiftx * val
+        return diffxL + self.shiftx * (val - area_startx)
 
 
     # convert y coordinate to position
     # функция для преобразования координаты y в позицию на экране
     def yToPos(self,val):
-        return diffyD + self.shifty * val
+        return diffyD + self.shifty * (val - area_starty)
 
 
     # init shift coefficients
     # функция для вычисления коэффициентов для рисования
     def initShifts(self):
-        maxx = max(x)
-        minx = min(x)
-
-        maxy = max(y)
-        miny = min(y)
-
-        if maxx == minx:
-          maxx = minx + 1
-        if maxy == miny:
-          maxy = miny + 1
-
-        self.shiftx = (window_sizex - diffxL - diffxR) / 200
-        self.shifty = (window_sizey - diffyD - diffyU) / 200
+        self.shiftx = (window_sizex - diffxL - diffxR) / area_sizex
+        self.shifty = (window_sizey - diffyD - diffyU) / area_sizey
 
 
     # draw strings
@@ -339,8 +358,11 @@ class TaskWidget (QWidget):
 
         # draw axes
         # рисование обозначений осей
-        qp.drawText (QPointF(window_sizex - diffxR - 10, self.yToPos(0) - 5), "X")
-        qp.drawText (QPointF(self.xToPos(0) - 20, window_sizey - diffyU), "Y")
+        qp.drawText (QPointF(window_sizex - diffxR + 10, diffyD + 5), "X")
+        qp.drawText (QPointF(diffxL - 15, window_sizey - diffyU + 20), "Y")
+
+        qp.drawText (QPointF(diffxL, diffyD - 5), str(area_startx))
+        qp.drawText (QPointF(window_sizex - diffxR - 30, diffyD - 5), str(area_startx + area_sizex))
 
         #qp.drawText (QPointF(self.xToPos(0) + 5, diffy), str(max(y_exact)))
         #qp.drawText (QPointF(self.xToPos(0) + 5, window_sizey - diffy), str(min(y_exact)))
@@ -362,6 +384,8 @@ class TaskWidget (QWidget):
         qp.setPen(pen)
 
         for i in range(0,N):
+          pen = QPen(color[i], 10, Qt.SolidLine)
+          qp.setPen(pen)
           qp.drawPoint(self.xToPos(x[i]), self.yToPos(y[i]))
 
 
