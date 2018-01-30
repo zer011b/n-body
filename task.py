@@ -34,12 +34,12 @@ m = [1] * N
 
 # default window position
 # начальная позиция окна
-window0x = 50
-window0y = 50
+window0x = 0
+window0y = 0
 
 # default window size
 # начальные размеры окна
-window_sizex = 950
+window_sizex = 900
 window_sizey = 700
 
 # lists with numerical values
@@ -50,6 +50,11 @@ y = [0] * N
 vx = [0] * N
 vy = [0] * N
 
+x0 = [0] * N
+y0 = [0] * N
+vx0 = [0] * N
+vy0 = [0] * N
+
 norm_r_ij = [[0 for x in range(N)] for y in range(N)]
 r_ij_x = [[0 for x in range(N)] for y in range(N)]
 r_ij_y = [[0 for x in range(N)] for y in range(N)]
@@ -59,8 +64,10 @@ eps = 0.001
 current_body_index=0
 
 # some window modifiers
-diffx=50
-diffy=100
+diffxL=50
+diffxR=250
+diffyU=50
+diffyD=50
 
 # QT widget to draw GUI
 # Виджет для рисования графического интерфейса
@@ -85,22 +92,29 @@ class TaskWidget (QWidget):
       current_body_index = index
 
       self.le3.setText(str(m[current_body_index]))
-      self.le4.setText(str(x[current_body_index]))
-      self.le5.setText(str(y[current_body_index]))
-      self.le6.setText(str(vx[current_body_index]))
-      self.le7.setText(str(vy[current_body_index]))
+      self.le4.setText(str(x0[current_body_index]))
+      self.le5.setText(str(y0[current_body_index]))
+      self.le6.setText(str(vx0[current_body_index]))
+      self.le7.setText(str(vy0[current_body_index]))
 
-      self.sb.setText("Сохранить значения для " + str(current_body_index) + " тела")
+      self.sb.setText("Сохранить для " + str(current_body_index) + " тела")
 
 
     def save_body(self):
       # get values from editor windows
       # получаем введенные значения
       m[current_body_index]=float(self.le3.text())
-      x[current_body_index]=float(self.le4.text())
-      y[current_body_index]=float(self.le5.text())
-      vx[current_body_index]=float(self.le6.text())
-      vy[current_body_index]=float(self.le7.text())
+      x0[current_body_index]=float(self.le4.text())
+      y0[current_body_index]=float(self.le5.text())
+      vx0[current_body_index]=float(self.le6.text())
+      vy0[current_body_index]=float(self.le7.text())
+
+      for i in range(0,N):
+        x[i] = x0[i]
+        y[i] = y0[i]
+        vx[i] = vx0[i]
+        vy[i] = vy0[i]
+
       self.update()
 
 
@@ -187,11 +201,12 @@ class TaskWidget (QWidget):
         # button for calculation
         # кнопка для начала расчета
         self.pb = QPushButton("Расчет", self)
-        self.pb.move (20, 10)
+        self.pb.move (window_sizex - 180, 550)
         self.pb.clicked.connect(self.button_click)
+        self.pb.setFixedWidth (150)
 
-        self.sb = QPushButton("Сохранить значения для " + str(current_body_index) + " тела", self)
-        self.sb.move (20, 50)
+        self.sb = QPushButton("Сохранить для " + str(current_body_index) + " тела", self)
+        self.sb.move (window_sizex - 185, 125)
         self.sb.clicked.connect(self.save_body)
 
         self.сb = QComboBox(self)
@@ -199,38 +214,38 @@ class TaskWidget (QWidget):
         for i in range(0,N):
           elements[i]='Тело ' + str(i)
         self.сb.addItems(elements)
-        self.сb.move (130, 10)
+        self.сb.move (window_sizex - 100, 90)
         self.сb.currentIndexChanged.connect(self.change_body)
 
         # edit fields
         # поля для ввода параметров
         self.le1 = QLineEdit(str(T), self)
-        self.le1.move (240, 10)
-        self.le1.setFixedWidth (50)
+        self.le1.move (window_sizex - 180, 430)
+        self.le1.setFixedWidth (150)
 
         self.le2 = QLineEdit(str(dt), self)
-        self.le2.move (330, 10)
-        self.le2.setFixedWidth (50)
+        self.le2.move (window_sizex - 180, 510)
+        self.le2.setFixedWidth (150)
 
         self.le3 = QLineEdit(str(m[current_body_index]), self)
-        self.le3.move (430, 10)
-        self.le3.setFixedWidth (50)
+        self.le3.move (window_sizex - 100, 190)
+        self.le3.setFixedWidth (75)
 
         self.le4 = QLineEdit(str(x[current_body_index]), self)
-        self.le4.move (530, 10)
-        self.le4.setFixedWidth (50)
+        self.le4.move (window_sizex - 100, 220)
+        self.le4.setFixedWidth (75)
 
         self.le5 = QLineEdit(str(y[current_body_index]), self)
-        self.le5.move (630, 10)
-        self.le5.setFixedWidth (50)
+        self.le5.move (window_sizex - 100, 250)
+        self.le5.setFixedWidth (75)
 
         self.le6 = QLineEdit(str(vx[current_body_index]), self)
-        self.le6.move (730, 10)
-        self.le6.setFixedWidth (50)
+        self.le6.move (window_sizex - 100, 280)
+        self.le6.setFixedWidth (75)
 
         self.le7 = QLineEdit(str(vy[current_body_index]), self)
-        self.le7.move (830, 10)
-        self.le7.setFixedWidth (50)
+        self.le7.move (window_sizex - 100, 310)
+        self.le7.setFixedWidth (75)
 
         # show widget
         # показать виджет
@@ -240,13 +255,13 @@ class TaskWidget (QWidget):
     # convert x coordinate to position
     # функция для преобразования координаты x в позицию на экране
     def xToPos(self,val):
-        return diffx + self.shiftx * val
+        return diffxL + self.shiftx * val
 
 
     # convert y coordinate to position
     # функция для преобразования координаты y в позицию на экране
     def yToPos(self,val):
-        return diffy + self.shifty * val
+        return diffyD + self.shifty * val
 
 
     # init shift coefficients
@@ -263,8 +278,8 @@ class TaskWidget (QWidget):
         if maxy == miny:
           maxy = miny + 1
 
-        self.shiftx = (window_sizex - 2*diffx) / 200
-        self.shifty = (window_sizey - 2*diffy) / 200
+        self.shiftx = (window_sizex - diffxL - diffxR) / 200
+        self.shifty = (window_sizey - diffyD - diffyU) / 200
 
 
     # draw strings
@@ -275,18 +290,28 @@ class TaskWidget (QWidget):
 
         # draw strings
         # рисование имен параметров
-        qp.drawText (QPointF(220, 28), "T=")
-        qp.drawText (QPointF(306, 28), "dt=")
-        qp.drawText (QPointF(405, 28), "m=")
-        qp.drawText (QPointF(503, 28), "x0=")
-        qp.drawText (QPointF(603, 28), "y0=")
-        qp.drawText (QPointF(697, 28), "vx0=")
-        qp.drawText (QPointF(797, 28), "vy0=")
+        qp.drawText (QPointF(window_sizex - 148, 420), "число шагов T")
+        qp.drawText (QPointF(window_sizex - 167, 500), "шаг по времени dt")
+        qp.drawText (QPointF(window_sizex - 178, 206), "масса m =")
+        qp.drawText (QPointF(window_sizex - 138, 236), "x0 =")
+        qp.drawText (QPointF(window_sizex - 138, 266), "y0 =")
+        qp.drawText (QPointF(window_sizex - 146, 296), "vx0 =")
+        qp.drawText (QPointF(window_sizex - 146, 326), "vy0 =")
 
-        qp.drawText (QPointF(700, 50), str(self.timestep))
+        qp.drawText (QPointF(700, 650), "Текущий шаг: " + str(self.timestep))
 
-        qp.drawText (QPointF(100, 650), "Тело 0: r(" + str(x[0]) + ", " + str(y[0]) + "); v(" + str(vx[0]) + ", " + str(vy[0])+ ")")
-        qp.drawText (QPointF(100, 670), "Тело 1: r(" + str(x[1]) + ", " + str(y[1]) + "); v(" + str(vx[1]) + ", " + str(vy[1])+ ")")
+        #qp.drawText (QPointF(100, 650), "Тело 0: r(" + str(x[0]) + ", " + str(y[0]) + "); v(" + str(vx[0]) + ", " + str(vy[0])+ ")")
+        #qp.drawText (QPointF(100, 670), "Тело 1: r(" + str(x[1]) + ", " + str(y[1]) + "); v(" + str(vx[1]) + ", " + str(vy[1])+ ")")
+
+        qp.drawLine(window_sizex - 200, 80, window_sizex - 200, 350)
+        qp.drawLine(window_sizex - 200, 80, window_sizex - 10, 80)
+        qp.drawLine(window_sizex - 10, 80, window_sizex - 10, 350)
+        qp.drawLine(window_sizex - 200, 350, window_sizex - 10, 350)
+
+        qp.drawLine(window_sizex - 200, 400, window_sizex - 200, 600)
+        qp.drawLine(window_sizex - 200, 400, window_sizex - 10, 400)
+        qp.drawLine(window_sizex - 10, 400, window_sizex - 10, 600)
+        qp.drawLine(window_sizex - 200, 600, window_sizex - 10, 600)
 
 
     # paint of widget
@@ -314,9 +339,8 @@ class TaskWidget (QWidget):
 
         # draw axes
         # рисование обозначений осей
-        qp.drawText (QPointF(self.xToPos(0) + 5, self.yToPos(0) - 5), "O")
-        qp.drawText (QPointF(window_sizex - diffx, self.yToPos(0) - 5), "X")
-        qp.drawText (QPointF(self.xToPos(0) - 10, diffy), "Y")
+        qp.drawText (QPointF(window_sizex - diffxR - 10, self.yToPos(0) - 5), "X")
+        qp.drawText (QPointF(self.xToPos(0) - 20, window_sizey - diffyU), "Y")
 
         #qp.drawText (QPointF(self.xToPos(0) + 5, diffy), str(max(y_exact)))
         #qp.drawText (QPointF(self.xToPos(0) + 5, window_sizey - diffy), str(min(y_exact)))
@@ -327,8 +351,10 @@ class TaskWidget (QWidget):
         pen = QPen(Qt.black, 2, Qt.DashLine)
         qp.setPen(pen)
 
-        qp.drawLine(diffx, self.yToPos(0), window_sizex - diffx, self.yToPos(0))
-        qp.drawLine(self.xToPos(0), window_sizey - diffy, self.xToPos(0), diffy)
+        qp.drawLine(diffxL, diffyD, window_sizex - diffxR, diffyD)
+        qp.drawLine(diffxL, diffyD, diffxL, window_sizey - diffyU)
+        qp.drawLine(window_sizex - diffxR, diffyD, window_sizex - diffxR, window_sizey - diffyU)
+        qp.drawLine(diffxL, window_sizey - diffyU, window_sizex - diffxR, window_sizey - diffyU)
 
         # draw numerical solution
         # рисование численного решения
