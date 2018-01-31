@@ -78,6 +78,9 @@ area_sizey = 200
 area_startx = -100
 area_starty = -100
 
+trajectory_x=[]
+trajectory_y=[]
+
 # QT widget to draw GUI
 # Виджет для рисования графического интерфейса
 class TaskWidget (QWidget):
@@ -116,7 +119,7 @@ class TaskWidget (QWidget):
 
       if right - left > 0.95 * area_sizex \
          or left <= area_startx or right >= area_startx + area_sizex:
-        area_sizex = 5*(right - left)
+        area_sizex = 2*(right - left)
         if area_sizex == 0:
           area_sizex = 10
         area_startx = (left + right)/2 - area_sizex/2
@@ -198,11 +201,17 @@ class TaskWidget (QWidget):
         print(str(self.timestep) + ': (' + str(x[0]) + ',' + str(y[0])+'); (' + str(x[1]) + ',' + str(y[1]) + ')')
         self.calculate_step()
 
+        if self.timestep % (1/dt) == 0:
+          current=int(self.timestep * dt)
+          for i in range(0,N):
+            trajectory_x[i][current] = x[i]
+            trajectory_y[i][current] = y[i]
+
 
     # button click handler
     # функция для обработки нажатия кнопки
     def button_click (self):
-      global T, dt
+      global T, dt, trajectory_x, trajectory_y
       self.pb.setEnabled(False)
       self.pb.setText("Подождите")
 
@@ -210,6 +219,11 @@ class TaskWidget (QWidget):
       # получаем введенные значения
       T=int(self.le1.text())
       dt=float(self.le2.text())
+
+      count=int(T*dt)
+      for i in range(0,N):
+        trajectory_x.append([0] * count)
+        trajectory_y.append([0] * count)
 
       # calculate numerical and exact solutions
       # вычисляем численное и точное решения
@@ -386,6 +400,14 @@ class TaskWidget (QWidget):
           pen = QPen(color[i], 10, Qt.SolidLine)
           qp.setPen(pen)
           qp.drawPoint(self.xToPos(x[i]), self.yToPos(y[i]))
+
+          pen = QPen(Qt.black, 1, Qt.DashLine)
+          qp.setPen(pen)
+
+          count=int(self.timestep * dt)
+          #print(trajectory_x)
+          for j in range(0,count):
+            qp.drawPoint(self.xToPos(trajectory_x[i][j]), self.yToPos(trajectory_y[i][j]))
 
 
 # starting point
