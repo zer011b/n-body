@@ -111,19 +111,18 @@ class TaskWidget (QWidget):
     def update_area(self, maxx, maxy, minx, miny):
       global area_sizex, area_sizey, area_startx, area_starty
 
-      if maxx - minx < 0.05 * area_sizex or maxx - minx > 0.95 * area_sizex \
-         or minx <= area_startx or maxx >= area_startx + area_sizex:
-        area_sizex = 10*(maxx - minx)
-        if area_sizex == 0:
-          area_sizex = 200
-        area_startx = (maxx + minx)/2 - area_sizex/2
+      left=min(minx, miny)
+      right=max(maxx, maxy)
 
-      if maxy - miny < 0.05 * area_sizey or maxy - miny > 0.95 * area_sizey \
-         or miny <= area_starty or maxy >= area_starty + area_sizey:
-        area_sizey = 10*(maxy - miny)
-        if area_sizey == 0:
-          area_sizey = 200
-        area_starty = (maxy + miny)/2 - area_sizey/2
+      if right - left > 0.95 * area_sizex \
+         or left <= area_startx or right >= area_startx + area_sizex:
+        area_sizex = 5*(right - left)
+        if area_sizex == 0:
+          area_sizex = 10
+        area_startx = (left + right)/2 - area_sizex/2
+
+        area_sizey=area_sizex
+        area_starty=area_startx
 
 
     def save_body(self):
