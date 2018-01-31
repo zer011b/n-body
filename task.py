@@ -31,7 +31,7 @@ T = 50
 dt = 0.1
 # mass
 # масса тела
-m = [1] * N
+m = []
 
 # default window position
 # начальная позиция окна
@@ -45,22 +45,22 @@ window_sizey = 700
 
 # lists with numerical values
 # списки со значениями координат, полученных численно
-x = [0] * N
-y = [0] * N
+x = []
+y = []
 # списки со значениями скоростей, полученных численно
-vx = [0] * N
-vy = [0] * N
+vx = []
+vy = []
 
-x0 = [0] * N
-y0 = [0] * N
-vx0 = [0] * N
-vy0 = [0] * N
+x0 = []
+y0 = []
+vx0 = []
+vy0 = []
 
-color = [QColor()] * N
+color = []
 
-norm_r_ij = [[0 for x in range(N)] for y in range(N)]
-r_ij_x = [[0 for x in range(N)] for y in range(N)]
-r_ij_y = [[0 for x in range(N)] for y in range(N)]
+norm_r_ij = []
+r_ij_x = []
+r_ij_y = []
 
 eps = 0.001
 
@@ -81,6 +81,8 @@ area_starty = -100
 trajectory_x=[]
 trajectory_y=[]
 
+trajectory_step=10
+
 # QT widget to draw GUI
 # Виджет для рисования графического интерфейса
 class TaskWidget (QWidget):
@@ -98,6 +100,17 @@ class TaskWidget (QWidget):
         self.timestep = 0
         self.app = app
 
+    def change_number_of_bodies(self):
+      global N
+      N=int(self.le0.text())
+      init_lists()
+      elements=[''] * N
+      for i in range(0,N):
+        elements[i]='Тело ' + str(i)
+      self.сb.clear()
+      self.сb.addItems(elements)
+      self.update()
+
 
     def change_body(self, index):
       global current_body_index
@@ -111,14 +124,15 @@ class TaskWidget (QWidget):
 
       self.sb.setText("Сохранить для " + str(current_body_index) + " тела")
 
-    def update_area(self, maxx, maxy, minx, miny):
+    def update_area(self, maxx, maxy, minx, miny, force = False):
       global area_sizex, area_sizey, area_startx, area_starty
 
       left=min(minx, miny)
       right=max(maxx, maxy)
 
       if right - left > 0.95 * area_sizex \
-         or left <= area_startx or right >= area_startx + area_sizex:
+         or left <= area_startx or right >= area_startx + area_sizex \
+         or force == True:
         area_sizex = 2*(right - left)
         if area_sizex == 0:
           area_sizex = 10
@@ -137,13 +151,10 @@ class TaskWidget (QWidget):
       vx0[current_body_index]=float(self.le6.text())
       vy0[current_body_index]=float(self.le7.text())
 
-      color[current_body_index] = QColor(random.randint(0,255), random.randint(0,255), random.randint(0,255))
-
-      for i in range(0,N):
-        x[i] = x0[i]
-        y[i] = y0[i]
-        vx[i] = vx0[i]
-        vy[i] = vy0[i]
+      x[current_body_index] = x0[current_body_index]
+      y[current_body_index] = y0[current_body_index]
+      vx[current_body_index] = vx0[current_body_index]
+      vy[current_body_index] = vy0[current_body_index]
 
       self.update_area(max(x), max(y), min(x), min(y))
       self.update()
@@ -190,6 +201,20 @@ class TaskWidget (QWidget):
 
     # функция для проведения вычислений
     def calculate(self):
+      global x, y, vx, vy
+      x = [0] * N
+      y = [0] * N
+      vx = [0] * N
+      vy = [0] * N
+
+      for i in range(0,N):
+        x[i] = x0[i]
+        y[i] = y0[i]
+        vx[i] = vx0[i]
+        vy[i] = vy0[i]
+
+      self.update_area(max(x), max(y), min(x), min(y), True)
+
       self.timestep = 0
       self.update_r_ij()
 
@@ -201,8 +226,8 @@ class TaskWidget (QWidget):
         print(str(self.timestep) + ': (' + str(x[0]) + ',' + str(y[0])+'); (' + str(x[1]) + ',' + str(y[1]) + ')')
         self.calculate_step()
 
-        if self.timestep % (1/dt) == 0:
-          current=int(self.timestep * dt)
+        if self.timestep % trajectory_step == 0:
+          current=int(self.timestep / trajectory_step)
           for i in range(0,N):
             trajectory_x[i][current] = x[i]
             trajectory_y[i][current] = y[i]
@@ -213,6 +238,8 @@ class TaskWidget (QWidget):
     def button_click (self):
       global T, dt, trajectory_x, trajectory_y
       self.pb.setEnabled(False)
+      self.sb.setEnabled(False)
+      self.nb.setEnabled(False)
       self.pb.setText("Подождите")
 
       # get values from editor windows
@@ -220,16 +247,18 @@ class TaskWidget (QWidget):
       T=int(self.le1.text())
       dt=float(self.le2.text())
 
-      count=int(T*dt)
+      count=int(T / trajectory_step)
       for i in range(0,N):
-        trajectory_x.append([0] * count)
-        trajectory_y.append([0] * count)
+        trajectory_x[i] = [0] * count
+        trajectory_y[i] = [0] * count
 
       # calculate numerical and exact solutions
       # вычисляем численное и точное решения
       self.calculate()
       self.pb.setText("Расчет")
       self.pb.setEnabled(True)
+      self.sb.setEnabled(True)
+      self.nb.setEnabled(True)
 
 
     # create GUI
@@ -252,6 +281,11 @@ class TaskWidget (QWidget):
         self.sb.move (window_sizex - 185, 125)
         self.sb.clicked.connect(self.save_body)
 
+        self.nb = QPushButton("Сохранить N", self)
+        self.nb.move (window_sizex - 180, 40)
+        self.nb.clicked.connect(self.change_number_of_bodies)
+        self.nb.setFixedWidth (170)
+
         self.сb = QComboBox(self)
         elements=[''] * N
         for i in range(0,N):
@@ -262,6 +296,10 @@ class TaskWidget (QWidget):
 
         # edit fields
         # поля для ввода параметров
+        self.le0 = QLineEdit(str(N), self)
+        self.le0.move (window_sizex - 80, 10)
+        self.le0.setFixedWidth (70)
+
         self.le1 = QLineEdit(str(T), self)
         self.le1.move (window_sizex - 180, 430)
         self.le1.setFixedWidth (150)
@@ -322,6 +360,7 @@ class TaskWidget (QWidget):
 
         # draw strings
         # рисование имен параметров
+        qp.drawText (QPointF(window_sizex - 180, 28), "число тел N = ")
         qp.drawText (QPointF(window_sizex - 148, 420), "число шагов T")
         qp.drawText (QPointF(window_sizex - 167, 500), "шаг по времени dt")
         qp.drawText (QPointF(window_sizex - 178, 206), "масса m =")
@@ -374,8 +413,8 @@ class TaskWidget (QWidget):
         qp.drawText (QPointF(window_sizex - diffxR + 10, diffyD + 5), "X")
         qp.drawText (QPointF(diffxL - 15, window_sizey - diffyU + 20), "Y")
 
-        qp.drawText (QPointF(diffxL, diffyD - 5), str(area_startx))
-        qp.drawText (QPointF(window_sizex - diffxR - 30, diffyD - 5), str(area_startx + area_sizex))
+        qp.drawText (QPointF(diffxL, diffyD - 5), str(int(area_startx)))
+        qp.drawText (QPointF(window_sizex - diffxR - 30, diffyD - 5), str(int(area_startx + area_sizex)))
 
         #qp.drawText (QPointF(self.xToPos(0) + 5, diffy), str(max(y_exact)))
         #qp.drawText (QPointF(self.xToPos(0) + 5, window_sizey - diffy), str(min(y_exact)))
@@ -404,15 +443,40 @@ class TaskWidget (QWidget):
           pen = QPen(Qt.black, 1, Qt.DashLine)
           qp.setPen(pen)
 
-          count=int(self.timestep * dt)
+          count=int(self.timestep / trajectory_step)
           #print(trajectory_x)
           for j in range(0,count):
             qp.drawPoint(self.xToPos(trajectory_x[i][j]), self.yToPos(trajectory_y[i][j]))
 
 
+def init_lists():
+  global x, y, vx, vy, x0, y0, vx0, vy0, m, color, norm_r_ij, r_ij_x, r_ij_y, trajectory_x, trajectory_y
+  x = [0] * N
+  y = [0] * N
+  vx = [0] * N
+  vy = [0] * N
+
+  x0 = [0] * N
+  y0 = [0] * N
+  vx0 = [0] * N
+  vy0 = [0] * N
+
+  m = [1] * N
+  color = [QColor(random.randint(0,255), random.randint(0,255), random.randint(0,255)) for x in  range(N)]
+
+  norm_r_ij = [[0 for x in range(N)] for y in range(N)]
+  r_ij_x = [[0 for x in range(N)] for y in range(N)]
+  r_ij_y = [[0 for x in range(N)] for y in range(N)]
+
+  trajectory_x = [[] for y in range(N)]
+  trajectory_y = [[] for y in range(N)]
+
+
 # starting point
 # начало выполнения программы
 if __name__ == '__main__':
+
+    init_lists()
 
     # create application
     # создание объекта приложения
