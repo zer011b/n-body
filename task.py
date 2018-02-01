@@ -86,6 +86,9 @@ trajectory_step=10
 showTrajectory = True
 showNames = False
 
+isCalculation = False
+doStopCalculation = False
+
 # QT widget to draw GUI
 # Виджет для рисования графического интерфейса
 class TaskWidget (QWidget):
@@ -229,6 +232,9 @@ class TaskWidget (QWidget):
         print(str(self.timestep) + ': (' + str(x[0]) + ',' + str(y[0])+'); (' + str(x[1]) + ',' + str(y[1]) + ')')
         self.calculate_step()
 
+        if doStopCalculation:
+          break
+
         if self.timestep % trajectory_step == 0:
           current=int(self.timestep / trajectory_step)
           for i in range(0,N):
@@ -239,11 +245,19 @@ class TaskWidget (QWidget):
     # button click handler
     # функция для обработки нажатия кнопки
     def button_click (self):
-      global T, dt, trajectory_x, trajectory_y
-      self.pb.setEnabled(False)
+      global T, dt, trajectory_x, trajectory_y, doStopCalculation, isCalculation
+
+      if isCalculation:
+        doStopCalculation = True
+        isCalculation = False
+        return
+
+      isCalculation = True
+      doStopCalculation = False
+
       self.sb.setEnabled(False)
       self.nb.setEnabled(False)
-      self.pb.setText("Подождите")
+      self.pb.setText("Стоп")
 
       # get values from editor windows
       # получаем введенные значения
@@ -258,8 +272,10 @@ class TaskWidget (QWidget):
       # calculate numerical and exact solutions
       # вычисляем численное и точное решения
       self.calculate()
+      isCalculation = False
+      doStopCalculation = False
       self.pb.setText("Расчет")
-      self.pb.setEnabled(True)
+
       self.sb.setEnabled(True)
       self.nb.setEnabled(True)
 
