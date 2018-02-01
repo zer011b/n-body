@@ -83,6 +83,8 @@ trajectory_y=[]
 
 trajectory_step=10
 
+showTrajectory = True
+
 # QT widget to draw GUI
 # Виджет для рисования графического интерфейса
 class TaskWidget (QWidget):
@@ -247,7 +249,7 @@ class TaskWidget (QWidget):
       T=int(self.le1.text())
       dt=float(self.le2.text())
 
-      count=int(T / trajectory_step)
+      count=max(int(T / trajectory_step), 1)
       for i in range(0,N):
         trajectory_x[i] = [0] * count
         trajectory_y[i] = [0] * count
@@ -259,6 +261,16 @@ class TaskWidget (QWidget):
       self.pb.setEnabled(True)
       self.sb.setEnabled(True)
       self.nb.setEnabled(True)
+
+
+    def changeShowTrajectory (self, state):
+      global showTrajectory
+      # задаем режим согласно переключателю в графическом интерфейсе
+      if state == Qt.Checked:
+        showTrajectory=True
+      else:
+        showTrajectory=False
+      self.update()
 
 
     # create GUI
@@ -293,6 +305,11 @@ class TaskWidget (QWidget):
         self.сb.addItems(elements)
         self.сb.move (window_sizex - 100, 90)
         self.сb.currentIndexChanged.connect(self.change_body)
+
+        self.checkBox = QCheckBox("Показать траекторию", self)
+        self.checkBox.move(diffxL, window_sizey - 40)
+        self.checkBox.toggle ()
+        self.checkBox.stateChanged.connect(self.changeShowTrajectory)
 
         # edit fields
         # поля для ввода параметров
@@ -411,7 +428,7 @@ class TaskWidget (QWidget):
         # draw axes
         # рисование обозначений осей
         qp.drawText (QPointF(window_sizex - diffxR + 10, diffyD + 5), "X")
-        qp.drawText (QPointF(diffxL - 15, window_sizey - diffyU + 20), "Y")
+        qp.drawText (QPointF(diffxL - 20, window_sizey - diffyU), "Y")
 
         qp.drawText (QPointF(diffxL, diffyD - 5), str(int(area_startx)))
         qp.drawText (QPointF(window_sizex - diffxR - 30, diffyD - 5), str(int(area_startx + area_sizex)))
@@ -440,13 +457,13 @@ class TaskWidget (QWidget):
           qp.setPen(pen)
           qp.drawPoint(self.xToPos(x[i]), self.yToPos(y[i]))
 
-          pen = QPen(Qt.black, 1, Qt.DashLine)
-          qp.setPen(pen)
+          if showTrajectory:
+            pen = QPen(Qt.black, 1, Qt.DashLine)
+            qp.setPen(pen)
 
-          count=int(self.timestep / trajectory_step)
-          #print(trajectory_x)
-          for j in range(0,count):
-            qp.drawPoint(self.xToPos(trajectory_x[i][j]), self.yToPos(trajectory_y[i][j]))
+            count=int(self.timestep / trajectory_step)
+            for j in range(0,count):
+              qp.drawPoint(self.xToPos(trajectory_x[i][j]), self.yToPos(trajectory_y[i][j]))
 
 
 def init_lists():
