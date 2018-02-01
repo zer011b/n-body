@@ -522,11 +522,27 @@ def init_lists():
   trajectory_y = [[] for y in range(N)]
 
 
+def init_default():
+  global x, y, vx, vy, x0, y0, vx0, vy0, m
+  x0[0] = x[0] = 0
+  y0[0] = y[0] = 0
+  x0[1] = x[1] = -100
+  y0[1] = y[1] = 0
+
+  vx0[0] = vx[0] = 0
+  vy0[0] = vy[0] = 0
+  vx0[1] = vx[1] = 0
+  vy0[1] = vy[1] = 1
+
+  m[0] = 100
+  m[1] = 0
+
 # starting point
 # начало выполнения программы
 if __name__ == '__main__':
 
     init_lists()
+    init_default()
 
     # create application
     # создание объекта приложения
