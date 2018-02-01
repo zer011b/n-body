@@ -84,6 +84,7 @@ trajectory_y=[]
 trajectory_step=10
 
 showTrajectory = True
+showNames = False
 
 # QT widget to draw GUI
 # Виджет для рисования графического интерфейса
@@ -272,6 +273,15 @@ class TaskWidget (QWidget):
         showTrajectory=False
       self.update()
 
+    def changeShowNames (self, state):
+      global showNames
+      # задаем режим согласно переключателю в графическом интерфейсе
+      if state == Qt.Checked:
+        showNames=True
+      else:
+        showNames=False
+      self.update()
+
 
     # create GUI
     # функция для создания графического интерфейса
@@ -310,6 +320,10 @@ class TaskWidget (QWidget):
         self.checkBox.move(diffxL, window_sizey - 40)
         self.checkBox.toggle ()
         self.checkBox.stateChanged.connect(self.changeShowTrajectory)
+
+        self.checkBox1 = QCheckBox("Показать координаты", self)
+        self.checkBox1.move(diffxL + 200, window_sizey - 40)
+        self.checkBox1.stateChanged.connect(self.changeShowNames)
 
         # edit fields
         # поля для ввода параметров
@@ -456,6 +470,9 @@ class TaskWidget (QWidget):
           pen = QPen(color[i], 10, Qt.SolidLine)
           qp.setPen(pen)
           qp.drawPoint(self.xToPos(x[i]), self.yToPos(y[i]))
+
+          if showNames:
+            qp.drawText (QPointF(self.xToPos(x[i]), self.yToPos(y[i])), "#" + str(i) + ":(" + "{0:.2f}".format(x[i]) + "," + "{0:.2f}".format(y[i]) + ")")
 
           if showTrajectory:
             pen = QPen(Qt.black, 1, Qt.DashLine)
