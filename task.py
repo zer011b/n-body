@@ -1,8 +1,6 @@
 #!/usr/bin/python3
 #-*- coding: utf-8 -*-
 
-# compare with http://www.andreasfaisst.ch/Simulationen/Nbody/2body.php
-
 # import system libs
 # подключение системных библиотек
 import sys
@@ -15,8 +13,14 @@ import random
 
 # constants
 # константы
+
+# минимальное расстояние между телами
+eps = 0.001
+
+# безразмерная константа G
 G = 1
-#G = 6.67408 * (10 ** (-11))
+# размерная константа G
+# G = 6.67408 * (10 ** (-11))
 
 # default values for global variables
 # глобальные переменные с их значениями по умолчанию
@@ -30,7 +34,7 @@ T = 50
 # разностный шаг по времени
 dt = 0.1
 # mass
-# масса тела
+# масса тел
 m = []
 
 # default window position
@@ -43,6 +47,20 @@ window0y = 0
 window_sizex = 900
 window_sizey = 700
 
+# отступы от границ окна
+diffxL=50
+diffxR=250
+diffyU=50
+diffyD=50
+
+# начальный размер области для отображения
+area_sizex = 200
+area_sizey = 200
+
+# начальные координаты левого верхнего угла области для отображения
+area_startx = -100
+area_starty = -100
+
 # lists with numerical values
 # списки со значениями координат, полученных численно
 x = []
@@ -51,42 +69,43 @@ y = []
 vx = []
 vy = []
 
+# списки с начальными координатами
 x0 = []
 y0 = []
+
+# списки с начальными скоростями
 vx0 = []
 vy0 = []
 
+# список с цветами тел для отображения
 color = []
 
+# список с квадратами норм расстояний между телами
 norm_r_ij = []
+
+# списки с компонентами радиус-векторов тел
 r_ij_x = []
 r_ij_y = []
 
-eps = 0.001
-
-current_body_index=0
-
-# some window modifiers
-diffxL=50
-diffxR=250
-diffyU=50
-diffyD=50
-
-area_sizex = 200
-area_sizey = 200
-
-area_startx = -100
-area_starty = -100
-
+# список с сохраненными точками траекторий
 trajectory_x=[]
 trajectory_y=[]
 
+# шаг для сохранения траектории
 trajectory_step=10
 
+# индекс текущего выбранного тела в списке в интерфейсе
+current_body_index=0
+
+# флаги для отображения
+# флаг, показывать траектории или нет
 showTrajectory = True
+# флаг, показывать имена и координаты или нет
 showNames = False
 
+# флаг, идет ли сейчас расчет или нет
 isCalculation = False
+# флаг, требуется ли остановить вычисления или нет
 doStopCalculation = False
 
 # QT widget to draw GUI
@@ -103,42 +122,71 @@ class TaskWidget (QWidget):
         # create GUI
         # вызываем функцию, создающую графический интерфейс
         self.initUI()
+
+        # задаем начальный шаг
         self.timestep = 0
+
+        # сохраняем объект приложения для дальнейшего доступа
         self.app = app
 
+
+    # функция для обработки нажатия на кнопку изменения числа тел
     def change_number_of_bodies(self):
       global N
+
+      # обновляем значение из графического интерфейса
       N=int(self.le0.text())
+
+      # задаем списки согласно новому N
       init_lists()
+
+      # обновляем список выбора тел в интерфейсе
       elements=[''] * N
       for i in range(0,N):
         elements[i]='Тело ' + str(i)
       self.сb.clear()
       self.сb.addItems(elements)
+
+      self.timestep = 0
+
+      # обновляем интерфейс
       self.update()
 
 
+    # функция для обработки выбора тела в интерфейсе
     def change_body(self, index):
       global current_body_index
+
+      # задаем индекс текущего тела
       current_body_index = index
 
+      # обновляем значения в интерфейсе согласно сохраненным
       self.le3.setText(str(m[current_body_index]))
       self.le4.setText(str(x0[current_body_index]))
       self.le5.setText(str(y0[current_body_index]))
       self.le6.setText(str(vx0[current_body_index]))
       self.le7.setText(str(vy0[current_body_index]))
 
+      # обновляем текст кнопки сохранения
       self.sb.setText("Сохранить для " + str(current_body_index) + " тела")
 
+
+    # функция для вычисления видимой области
     def update_area(self, maxx, maxy, minx, miny, force = False):
       global area_sizex, area_sizey, area_startx, area_starty
 
+      # вычисляем минимальные и максимальные координаты
       left=min(minx, miny)
       right=max(maxx, maxy)
 
+      # если координаты вышли за пределы области, или занимаемая площадь стала большой,
+      # или необходимо обновить видимую область независимо от этих условий, то
+      # обновляем видимую область
       if right - left > 0.95 * area_sizex \
          or left <= area_startx or right >= area_startx + area_sizex \
          or force == True:
+
+        # задаем видимую область как удвоенное расстояние между минимальной и максимальной координатами
         area_sizex = 2*(right - left)
         if area_sizex == 0:
           area_sizex = 10
@@ -148,6 +196,7 @@ class TaskWidget (QWidget):
         area_starty=area_startx
 
 
+    # функция для обработки нажатия на кнопку сохранения параметров для тела
     def save_body(self):
       # get values from editor windows
       # получаем введенные значения
@@ -157,29 +206,36 @@ class TaskWidget (QWidget):
       vx0[current_body_index]=float(self.le6.text())
       vy0[current_body_index]=float(self.le7.text())
 
+      # сохраняем текущие значения
       x[current_body_index] = x0[current_body_index]
       y[current_body_index] = y0[current_body_index]
       vx[current_body_index] = vx0[current_body_index]
       vy[current_body_index] = vy0[current_body_index]
 
+      # обновляем видимую область
       self.update_area(max(x), max(y), min(x), min(y))
       self.update()
 
 
-    # функция для обновления r_ij
+    # функция для обновления радиус-векторов
     def update_r_ij(self):
+      # обходим все пары тел и вычисляем радиус-вектора
       for i in range(0,N):
         for j in range(0,N):
           r_ij_x[i][j] = x[j] - x[i];
           r_ij_y[i][j] = y[j] - y[i];
           norm_r_ij[i][j] = (r_ij_x[i][j]) ** 2 + (r_ij_y[i][j]) ** 2
 
+
+    # вспомогательная функция для вычислений
     def calculate_r_ij_sum_x(self, index):
       sum=0
       for j in range(0,N):
         sum += m[j] * r_ij_x[index][j] / sqrt((norm_r_ij[index][j] + eps ** 2) ** 3)
       return sum
 
+
+    # вспомогательная функция для вычислений
     def calculate_r_ij_sum_y(self, index):
       sum=0
       for j in range(0,N):
@@ -189,52 +245,62 @@ class TaskWidget (QWidget):
 
     # функция для расчета одного временного шага
     def calculate_step(self):
+      # обновляем координаты
       for i in range(0,N):
         x[i] = x[i] + dt * vx[i]
         y[i] = y[i] + dt * vy[i]
 
+      # обновляем радиус-векторы
       self.update_r_ij()
 
+      # обновляем скорости
       for i in range(0,N):
         vx[i] = vx[i] + dt * G * self.calculate_r_ij_sum_x(i)
         vy[i] = vy[i] + dt * G * self.calculate_r_ij_sum_y(i)
 
+      # обновляем видимую область
       self.update_area(max(x), max(y), min(x), min(y))
       self.update()
-      #sleep(0.05)
+
+      # разрешаем обработчику событий обработать события интерфейса
       self.app.processEvents()
 
 
     # функция для проведения вычислений
     def calculate(self):
       global x, y, vx, vy
-      x = [0] * N
-      y = [0] * N
-      vx = [0] * N
-      vy = [0] * N
 
+      # задаем начальные координаты и скорости
       for i in range(0,N):
         x[i] = x0[i]
         y[i] = y0[i]
         vx[i] = vx0[i]
         vy[i] = vy0[i]
 
+      # задаем начальный шаг
+      self.timestep = 0
+
+      # обновляем видимую область
       self.update_area(max(x), max(y), min(x), min(y), True)
 
-      self.timestep = 0
+      # обновляем радиус-векторы
       self.update_r_ij()
 
+      # выполняем начальный шаг для вычисления скоростей
       for i in range(0,N):
         vx[i] = vx[i] + dt * G / 2 * self.calculate_r_ij_sum_x(i)
         vy[i] = vy[i] + dt * G / 2 * self.calculate_r_ij_sum_y(i)
 
+      # выполняем шаги
       for self.timestep in range(0, T):
-        print(str(self.timestep) + ': (' + str(x[0]) + ',' + str(y[0])+'); (' + str(x[1]) + ',' + str(y[1]) + ')')
+        # вычисляем шаг
         self.calculate_step()
 
+        # выходим из цикла, если необходимо остановить вычисления
         if doStopCalculation:
           break
 
+        # если текущий шаг кратен количеству шагов для сохранения траектории, то сохраняем
         if self.timestep % trajectory_step == 0:
           current=int(self.timestep / trajectory_step)
           for i in range(0,N):
@@ -247,14 +313,17 @@ class TaskWidget (QWidget):
     def button_click (self):
       global T, dt, trajectory_x, trajectory_y, doStopCalculation, isCalculation
 
+      # если кнопка нажата и идет расчет, то нужно остановить расчет
       if isCalculation:
         doStopCalculation = True
         isCalculation = False
         return
 
+      # начинаем расчет
       isCalculation = True
       doStopCalculation = False
 
+      # делаем кнопки недоступными
       self.sb.setEnabled(False)
       self.nb.setEnabled(False)
       self.pb.setText("Стоп")
@@ -264,6 +333,7 @@ class TaskWidget (QWidget):
       T=int(self.le1.text())
       dt=float(self.le2.text())
 
+      # задаем списки со значениями для траекторий
       count=max(int(T / trajectory_step), 1)
       for i in range(0,N):
         trajectory_x[i] = [0] * count
@@ -272,14 +342,18 @@ class TaskWidget (QWidget):
       # calculate numerical and exact solutions
       # вычисляем численное и точное решения
       self.calculate()
-      isCalculation = False
-      doStopCalculation = False
-      self.pb.setText("Расчет")
 
+      # делаем кнопки доступными
+      self.pb.setText("Расчет")
       self.sb.setEnabled(True)
       self.nb.setEnabled(True)
 
+      # заканчиваем расчет
+      isCalculation = False
+      doStopCalculation = False
 
+
+    # функция для обработки нажатия на кнопку показа/выключения траектории
     def changeShowTrajectory (self, state):
       global showTrajectory
       # задаем режим согласно переключателю в графическом интерфейсе
@@ -289,6 +363,8 @@ class TaskWidget (QWidget):
         showTrajectory=False
       self.update()
 
+
+    # функция для обработки нажатия на кнопку показа/выключения номеров тел и координат
     def changeShowNames (self, state):
       global showNames
       # задаем режим согласно переключателю в графическом интерфейсе
@@ -315,15 +391,18 @@ class TaskWidget (QWidget):
         self.pb.clicked.connect(self.button_click)
         self.pb.setFixedWidth (150)
 
+        # кнопка для сохранения параметров для текущего тела
         self.sb = QPushButton("Сохранить для " + str(current_body_index) + " тела", self)
         self.sb.move (window_sizex - 185, 125)
         self.sb.clicked.connect(self.save_body)
 
+        # кнопка для сохранения числа тел
         self.nb = QPushButton("Сохранить N", self)
         self.nb.move (window_sizex - 180, 40)
         self.nb.clicked.connect(self.change_number_of_bodies)
         self.nb.setFixedWidth (170)
 
+        # элемент список с выбором тела
         self.сb = QComboBox(self)
         elements=[''] * N
         for i in range(0,N):
@@ -332,11 +411,13 @@ class TaskWidget (QWidget):
         self.сb.move (window_sizex - 100, 90)
         self.сb.currentIndexChanged.connect(self.change_body)
 
+        # кнопка показа траектории
         self.checkBox = QCheckBox("Показать траекторию", self)
         self.checkBox.move(diffxL, window_sizey - 40)
         self.checkBox.toggle ()
         self.checkBox.stateChanged.connect(self.changeShowTrajectory)
 
+        # кнопка показа координат
         self.checkBox1 = QCheckBox("Показать координаты", self)
         self.checkBox1.move(diffxL + 200, window_sizey - 40)
         self.checkBox1.stateChanged.connect(self.changeShowNames)
@@ -418,9 +499,7 @@ class TaskWidget (QWidget):
 
         qp.drawText (QPointF(700, 650), "Текущий шаг: " + str(self.timestep))
 
-        #qp.drawText (QPointF(100, 650), "Тело 0: r(" + str(x[0]) + ", " + str(y[0]) + "); v(" + str(vx[0]) + ", " + str(vy[0])+ ")")
-        #qp.drawText (QPointF(100, 670), "Тело 1: r(" + str(x[1]) + ", " + str(y[1]) + "); v(" + str(vx[1]) + ", " + str(vy[1])+ ")")
-
+        # рисование границ областей
         qp.drawLine(window_sizex - 200, 80, window_sizex - 200, 350)
         qp.drawLine(window_sizex - 200, 80, window_sizex - 10, 80)
         qp.drawLine(window_sizex - 10, 80, window_sizex - 10, 350)
@@ -463,10 +542,6 @@ class TaskWidget (QWidget):
         qp.drawText (QPointF(diffxL, diffyD - 5), str(int(area_startx)))
         qp.drawText (QPointF(window_sizex - diffxR - 30, diffyD - 5), str(int(area_startx + area_sizex)))
 
-        #qp.drawText (QPointF(self.xToPos(0) + 5, diffy), str(max(y_exact)))
-        #qp.drawText (QPointF(self.xToPos(0) + 5, window_sizey - diffy), str(min(y_exact)))
-        #qp.drawText (QPointF(self.xToPos(x_exact[N-1]) - 5, self.yToPos(0) + 20), str(x_exact[N-1]))
-
         # draw axes
         # рисование осей
         pen = QPen(Qt.black, 2, Qt.DashLine)
@@ -487,9 +562,11 @@ class TaskWidget (QWidget):
           qp.setPen(pen)
           qp.drawPoint(self.xToPos(x[i]), self.yToPos(y[i]))
 
+          # рисование имени тела
           if showNames:
             qp.drawText (QPointF(self.xToPos(x[i]), self.yToPos(y[i])), "#" + str(i) + ":(" + "{0:.2f}".format(x[i]) + "," + "{0:.2f}".format(y[i]) + ")")
 
+          # рисование траектории
           if showTrajectory:
             pen = QPen(Qt.black, 1, Qt.DashLine)
             qp.setPen(pen)
@@ -499,6 +576,7 @@ class TaskWidget (QWidget):
               qp.drawPoint(self.xToPos(trajectory_x[i][j]), self.yToPos(trajectory_y[i][j]))
 
 
+# функция для иниицализации списков согласно новому значению параметра N
 def init_lists():
   global x, y, vx, vy, x0, y0, vx0, vy0, m, color, norm_r_ij, r_ij_x, r_ij_y, trajectory_x, trajectory_y
   x = [0] * N
@@ -512,16 +590,19 @@ def init_lists():
   vy0 = [0] * N
 
   m = [1] * N
+  # задаем произвольные цвета для рисования тел
   color = [QColor(random.randint(0,255), random.randint(0,255), random.randint(0,255)) for x in  range(N)]
 
   norm_r_ij = [[0 for x in range(N)] for y in range(N)]
   r_ij_x = [[0 for x in range(N)] for y in range(N)]
   r_ij_y = [[0 for x in range(N)] for y in range(N)]
 
-  trajectory_x = [[] for y in range(N)]
-  trajectory_y = [[] for y in range(N)]
+  trajectory_x = [[0] for y in range(N)]
+  trajectory_y = [[0] for y in range(N)]
 
 
+# функция для инициализации начальных значений
+# Пример: тело, вращающееся вокруг другого тела
 def init_default():
   global x, y, vx, vy, x0, y0, vx0, vy0, m
   x0[0] = x[0] = 0
@@ -537,10 +618,12 @@ def init_default():
   m[0] = 100
   m[1] = 0
 
+
 # starting point
 # начало выполнения программы
 if __name__ == '__main__':
 
+    # инициализируем списки и начальные значения
     init_lists()
     init_default()
 
